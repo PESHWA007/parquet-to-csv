@@ -1,0 +1,31 @@
+import pyarrow as pa
+import pyarrow.parquet as pq
+import pandas as pd
+
+def flatten_complex_mapping(data, prefix=''):
+    flattened_data = {}
+    for key, value in data.items():
+        new_key = prefix + key if prefix else key
+        if isinstance(value, dict):
+            flattened_data.update(flatten_complex_mapping(value, new_key + '_'))
+        elif isinstance(value, list):
+            for i, item in enumerate(value):
+                if isinstance(item, dict):
+                    flattened_data.update(flatten_complex_mapping(item, new_key + f'_{i}_'))
+                else:
+                    flattened_data[new_key + f'_{i}'] = item
+        else:
+            flattened_data[new_key] = value
+    return flattened_data
+
+def parquet_to_csv(parquet_file, csv_file):
+    table = pq.read_table(parquet_file)
+    data = table.to_pydict()
+    flattened_data = flatten_complex_mapping(data)
+    df = pd.DataFrame(flattened_data)
+    df.to_csv(csv_file, index=False)
+
+# Example usage
+parquet_file = 'input.parquet'
+csv_file = 'output.csv'
+parquet_to_csv(parquet_file, csv_file)
