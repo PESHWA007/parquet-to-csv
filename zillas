@@ -1,0 +1,29 @@
+$currentVersion = (Get-ItemProperty 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\FileZilla Client').DisplayVersion
+
+$url = "https://filezilla-project.org/download.php?platform=win64"
+$destination = "$env:ProgramFiles\FileZilla_Client.zip"
+
+Invoke-WebRequest -Uri $url -OutFile $destination
+
+$extractPath = "$env:TEMP\FileZilla"
+
+# Create the extraction directory
+New-Item -ItemType Directory -Path $extractPath -Force | Out-Null
+
+# Extract the downloaded ZIP file
+Expand-Archive -Path $destination -DestinationPath $extractPath -Force
+
+# Get the version from the extracted files
+$newVersion = (Get-Item -Path "$extractPath\*" | Select-Object -First 1).VersionInfo.ProductVersion
+
+# Remove the existing FileZilla installation
+Remove-Item -Path "$env:ProgramFiles\FileZilla" -Recurse -Force -ErrorAction SilentlyContinue
+
+# Copy the extracted files to the installation directory
+Copy-Item -Path "$extractPath\*" -Destination "$env:ProgramFiles" -Recurse -Force
+
+# Clean up the extraction directory
+Remove-Item -Path $extractPath -Recurse -Force
+
+Write-Output "FileZilla has been successfully upgraded to version $newVersion."
+
